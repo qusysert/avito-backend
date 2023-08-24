@@ -5,6 +5,7 @@ import (
 	"avito-backend/internal/pkg/config"
 	db "avito-backend/pkg/gopkg-db"
 	"context"
+	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	_ "github.com/swaggo/http-swagger/example/gorilla/docs"
@@ -25,7 +26,7 @@ var conn db.IClient
 //	@contact.name	Ivan Demchuk
 //	@contact.email	is.demchuk@gmail.com
 
-//	@host		localhost:8080
+// @host		localhost:8080
 func main() {
 	cfg, err := config.LoadConfig()
 	if err != nil {
@@ -35,12 +36,12 @@ func main() {
 	// Creating connection to DB
 	conn, err = db.New(cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName)
 	if err != nil {
-		log.Fatal("cannot create connection to db")
+		log.Fatal(fmt.Errorf("cant create connection to db: %v", err))
 	}
 
 }
 
-func externalServerFn(ctx context.Context, cfg config.Config, hdl *handler.Handler) func() error {
+func serverFn(ctx context.Context, cfg config.Config, hdl *handler.Handler) func() error {
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowCredentials: true,
@@ -84,7 +85,7 @@ func externalServerFn(ctx context.Context, cfg config.Config, hdl *handler.Handl
 		case <-ctx.Done():
 			err = externalServer.Shutdown(ctx)
 		}
-		log.Printf("External externalServer finished, error: %w\n", err)
+		log.Printf("External externalServer finished, error: %v\n", err)
 		return err
 	}
 }

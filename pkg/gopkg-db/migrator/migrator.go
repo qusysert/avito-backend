@@ -2,6 +2,7 @@ package migrator
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -55,7 +56,7 @@ func (m *Migrator) Up() error {
 		return err
 	}
 	err = mig.Up()
-	if err == migrate.ErrNoChange {
+	if errors.Is(err, migrate.ErrNoChange) {
 		log.Printf("Database doesn't change\n")
 		return nil
 	}

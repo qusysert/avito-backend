@@ -38,7 +38,7 @@ func LoadConfig() (Config, error) {
 		DBPassword: os.Getenv("AB_DB_PASSWORD"),
 		DBName:     os.Getenv("AB_DB_NAME"),
 		HttpPort:   os.Getenv("AB_HTTP_PORT"),
-		HttpHost:   os.Getenv("HTTP_HOST"),
+		HttpHost:   os.Getenv("AB_HTTP_HOST"),
 	}
 
 	log.Printf("config: %#v\n", config)

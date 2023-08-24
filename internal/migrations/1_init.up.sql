@@ -16,7 +16,11 @@ create table user_segment
     segment_id integer not null
         constraint user_segment_segment_id_fk
             references segment,
-    expires    date,
+    expires    timestamp,
     constraint user_segment_pk2
         unique (user_id, segment_id, expires)
 );
+
+create index user_segment_user_id_index
+    on user_segment (user_id);
+
