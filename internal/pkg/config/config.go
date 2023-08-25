@@ -20,10 +20,12 @@ type Config struct {
 
 func LoadConfig() (Config, error) {
 
-	err := godotenv.Load()
-	if err != nil {
-		log.Printf("Error loading .env file")
-		panic(err)
+	if _, err := os.Stat(".env"); err == nil {
+		err := godotenv.Load()
+		if err != nil {
+			log.Printf("Error loading .env file")
+			panic(err)
+		}
 	}
 
 	DbPort, err := strconv.Atoi(os.Getenv("AB_DB_PORT"))

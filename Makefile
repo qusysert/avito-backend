@@ -14,3 +14,6 @@ gen-swagger:
 lint:
 	GOBIN=$(LOCAL_BIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.42.1
 	$(LOCAL_BIN)/golangci-lint run ./...
+
+docker-up:
+	docker-compose up --build

@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "avito-backend/docs"
 	"avito-backend/internal/app/handler"
 	"avito-backend/internal/app/repository"
 	"avito-backend/internal/app/service"
@@ -9,7 +10,6 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
-	_ "github.com/swaggo/http-swagger/example/gorilla/docs"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"log"
 	"net/http"
@@ -24,9 +24,8 @@ var conn db.IClient
 //	@version		1.0
 //	@description	Swagger documentation fo Backend Trainee Assignment 2023 service
 
-//	@contact.name	Ivan Demchuk
-//	@contact.email	is.demchuk@gmail.com
-
+// @contact.name	Ivan Demchuk
+// @contact.email	is.demchuk@gmail.com
 // @host		localhost:8080
 func main() {
 	cfg, err := config.LoadConfig()
@@ -55,7 +54,7 @@ func main() {
 
 	// Setting timeout for the server
 	server := &http.Server{
-		Addr:         ":" + cfg.HttpPort,
+		Addr:         "0.0.0.0:" + cfg.HttpPort,
 		ReadTimeout:  600 * time.Second,
 		WriteTimeout: 600 * time.Second,
 		Handler:      c.Handler(router),
