@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"avito-backend/internal/app/model"
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/go-playground/validator"
@@ -9,7 +11,13 @@ import (
 	"reflect"
 )
 
-type IService interface{}
+type IService interface {
+	AddSegment(ctx context.Context, name string) (int, error)
+	AddDeleteUserSegment(ctx context.Context, userId int, toAdd []model.Segment, toDelete []string) ([]int, error)
+	DeleteSegment(ctx context.Context, id int) error
+	FlushExpired(ctx context.Context) error
+	GetSegmentsOfUser(ctx context.Context, userID int) ([]string, error)
+}
 
 type Handler struct {
 	service IService

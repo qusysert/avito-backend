@@ -1,3 +1,58 @@
+definitions:
+  handler.AddDeleteUserSegmentRequest:
+    properties:
+      to_add:
+        items:
+          $ref: '#/definitions/model.Segment'
+        type: array
+      to_delete:
+        example:
+        - SEGMENT1
+        - SEGMENT2
+        items:
+          format: array
+          type: string
+        type: array
+      user_id:
+        example: 1000
+        format: integer
+        type: integer
+    type: object
+  handler.AddDeleteUserSegmentResponse:
+    properties:
+      added_ids:
+        example:
+        - 6
+        - 7
+        - 8
+        items:
+          format: array
+          type: integer
+        type: array
+    type: object
+  handler.AddSegmentRequest:
+    properties:
+      name:
+        example: AVITO_TEST_SEGMENT
+        format: string
+        type: string
+    type: object
+  handler.AddSegmentResponse:
+    properties:
+      id:
+        example: 1
+        format: integer
+        type: integer
+    type: object
+  model.Segment:
+    properties:
+      expires:
+        example: 2023-08-25T17:00:05
+        type: string
+      name:
+        example: SEGMENT10
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact:
@@ -6,5 +61,96 @@ info:
   description: Swagger documentation fo Backend Trainee Assignment 2023 service
   title: Backend Trainee Assignment 2023
   version: "1.0"
-paths: {}
+paths:
+  /addDeleteUserSegment:
+    put:
+      consumes:
+      - application/json
+      description: add and delete segments from user by id
+      parameters:
+      - description: query params
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.AddDeleteUserSegmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.AddDeleteUserSegmentResponse'
+      summary: Add and delete segments from user by id
+      tags:
+      - user segment
+  /addSegment:
+    post:
+      consumes:
+      - application/json
+      description: add segment and get back its' id
+      parameters:
+      - description: query params
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.AddSegmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.AddSegmentResponse'
+      summary: Add segment
+      tags:
+      - segment
+  /deleteSegment/{id}:
+    delete:
+      description: delete segment by id; delete all user_segment entries with the
+        given id
+      parameters:
+      - description: Segment id
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Delete segment
+      tags:
+      - segment
+  /flushExpired:
+    delete:
+      description: delete segment by id; delete all user_segment entries with the
+        given id
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Flush expired user_segment entries
+      tags:
+      - user segment
+  /getSegmentsOfUser/{id}:
+    get:
+      description: get segments of user by id; returns only not expired entries
+      parameters:
+      - description: User id
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Get segments of user
+      tags:
+      - user
 swagger: "2.0"

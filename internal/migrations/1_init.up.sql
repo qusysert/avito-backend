@@ -1,6 +1,6 @@
 create table segment
 (
-    id   integer not null
+    id   serial
         constraint segment_pk
             primary key,
     name varchar not null
@@ -9,7 +9,7 @@ create table segment
 
 create table user_segment
 (
-    id         integer not null
+    id         serial
         constraint user_segment_pk
             primary key,
     user_id    integer not null,
@@ -18,7 +18,7 @@ create table user_segment
             references segment,
     expires    timestamp,
     constraint user_segment_pk2
-        unique (user_id, segment_id, expires)
+        unique (user_id, segment_id)
 );
 
 create index user_segment_user_id_index

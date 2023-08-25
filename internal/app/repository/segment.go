@@ -9,12 +9,12 @@ import (
 func (r *Repository) AddSegmentIfNotExists(ctx context.Context, name string) (int, error) {
 	var id int
 	row := db.FromContext(ctx).QueryRow(ctx,
-		`INSERT INTO segment (name) VALUES ($1) ON CONFLICT DO NOTHING RETURNING id`,
+		`INSERT INTO segment (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = $1 RETURNING id`,
 		name)
 
 	err := row.Scan(&id)
 	if err != nil {
-		return 0, fmt.Errorf("cant scan row on adding segment: %w", err)
+		return 0, fmt.Errorf("can't scan row on adding segment: %w", err)
 	}
 
 	return id, nil
@@ -45,4 +45,16 @@ func (r *Repository) GetSegmentName(ctx context.Context, id int) (string, error)
 	}
 
 	return name, nil
+}
+
+func (r *Repository) GetSegmentId(ctx context.Context, name string) (int, error) {
+	var id int
+	row := db.FromContext(ctx).QueryRow(ctx, `SELECT id FROM segment WHERE name=$1`, name)
+
+	err := row.Scan(&name)
+	if err != nil {
+		return 0, fmt.Errorf("cant get segment id with row.Scan() %w", err)
+	}
+
+	return id, nil
 }

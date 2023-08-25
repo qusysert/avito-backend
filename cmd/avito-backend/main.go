@@ -2,9 +2,10 @@ package main
 
 import (
 	"avito-backend/internal/app/handler"
+	"avito-backend/internal/app/repository"
+	"avito-backend/internal/app/service"
 	"avito-backend/internal/pkg/config"
 	db "avito-backend/pkg/gopkg-db"
-	"context"
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
@@ -39,55 +40,55 @@ func main() {
 		log.Fatal(fmt.Errorf("cant create connection to db: %v", err))
 	}
 
-}
+	repo := repository.New()
 
-func serverFn(ctx context.Context, cfg config.Config, hdl *handler.Handler) func() error {
+	srv := service.New(cfg, repo)
+	hdl := handler.New(srv)
+
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowCredentials: true,
 		AllowedHeaders:   []string{"*"},
 	})
 
-	externalRouter := mux.NewRouter()
+	router := mux.NewRouter()
 
-	// Setting timeout for the externalServer
-	externalServer := &http.Server{
+	// Setting timeout for the server
+	server := &http.Server{
 		Addr:         ":" + cfg.HttpPort,
 		ReadTimeout:  600 * time.Second,
 		WriteTimeout: 600 * time.Second,
-		Handler:      c.Handler(externalRouter),
+		Handler:      c.Handler(router),
 	}
 
 	// Linking addresses and handlers
 	for _, rec := range [...]struct {
-		route       string
-		handler     http.HandlerFunc
-		withoutAuth bool
+		route   string
+		handler http.HandlerFunc
 	}{
 		{route: "/swagger.json", handler: func(w http.ResponseWriter, r *http.Request) {
 			cwd, _ := os.Getwd()
 			http.ServeFile(w, r, path.Join(cwd, "docs/swagger.json"))
-		}, withoutAuth: true},
-		{route: "/swagger/{any:.+}", handler: httpSwagger.Handler(httpSwagger.URL("/swagger.json")), withoutAuth: true},
+		}},
+		{route: "/swagger/{any:.+}", handler: httpSwagger.Handler(httpSwagger.URL("/swagger.json"))},
+		{route: "/deleteSegment/{id}", handler: hdl.DeleteSegmentHandler},
+		{route: "/addSegment", handler: hdl.AddSegmentHandler},
+		{route: "/addDeleteUserSegment", handler: hdl.AddDeleteUserSegmentHandler},
+		{route: "/flushExpired", handler: hdl.FlushExpiredHandler},
+		{route: "/getSegmentsOfUser/{id}", handler: hdl.GetSegmentsOfUserHandler},
 	} {
-		externalRouter.HandleFunc(rec.route, DbMiddleware(rec.handler))
+		router.HandleFunc(rec.route, DbMiddleware(rec.handler))
 	}
 
-	return func() error {
-		errCh := make(chan error)
-		go func() {
-			errCh <- externalServer.ListenAndServe()
-		}()
-		var err error
-		select {
-		case serverErr := <-errCh:
-			err = serverErr
-		case <-ctx.Done():
-			err = externalServer.Shutdown(ctx)
-		}
-		log.Printf("External externalServer finished, error: %v\n", err)
-		return err
+	http.Handle("/", router)
+
+	log.Printf("Server started on port %s \n", cfg.HttpPort)
+
+	err = server.ListenAndServe()
+	if err != nil {
+		log.Fatal(err.Error())
 	}
+
 }
 
 func DbMiddleware(next http.HandlerFunc) http.HandlerFunc {
