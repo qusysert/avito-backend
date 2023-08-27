@@ -1,11 +1,13 @@
 package handler
 
 import (
+	"context"
 	"fmt"
-	"github.com/gorilla/mux"
-	"net/http"
-	"strconv"
 )
+
+type DeleteSegmentRequest struct {
+	Name string `query:"name"`
+}
 
 // DeleteSegmentHandler godoc
 //
@@ -15,20 +17,10 @@ import (
 //	@Param 			id path int true "Segment id"
 //	@Success		200	{string}	Status Ok
 //	@Router			/deleteSegment/{id} [delete]
-func (h Handler) DeleteSegmentHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	idArg := vars["id"]
-	id, err := strconv.ParseInt(idArg, 10, 64)
+func (h Handler) DeleteSegmentHandler(ctx context.Context, req DeleteSegmentRequest) (*emptyResponse, error) {
+	err := h.service.DeleteSegment(ctx, req.Name)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Bad Request: %v", err), http.StatusBadRequest)
-		return
+		return nil, fmt.Errorf("cannot delete segment: %w", err)
 	}
-
-	err = h.service.DeleteSegment(r.Context(), int(id))
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Internal Server Error: %v", err), http.StatusInternalServerError)
-		return
-	}
-	http.Error(w, fmt.Sprintf("Status Ok"), http.StatusOK)
-	return
+	return &emptyResponse{}, err
 }

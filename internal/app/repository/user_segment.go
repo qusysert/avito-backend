@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"avito-backend/internal/app/model"
 	db "avito-backend/pkg/gopkg-db"
 	"context"
 	"database/sql"
@@ -35,9 +36,9 @@ func (r *Repository) AddUserSegmentIfNotExists(ctx context.Context, userId, segm
 	return id, nil
 }
 
-func (r *Repository) GetSegmentsOfUser(ctx context.Context, id int) ([]int, error) {
-	var segmentIds []int
-	rows, err := db.FromContext(ctx).Query(ctx, `SELECT segment_id FROM user_segment WHERE user_id=$1 AND expires>$2`,
+func (r *Repository) GetUserSegments(ctx context.Context, id int) ([]model.SegmentWithExpires, error) {
+	var segments []model.SegmentWithExpires
+	rows, err := db.FromContext(ctx).Query(ctx, `SELECT us.segment_id, s.name, us.expires FROM user_segment us INNER JOIN segment s ON us.segment_id = s.id WHERE us.user_id=$1 AND us.expires>$2`,
 		id, time.Now())
 	if err != nil {
 		return nil, fmt.Errorf("failed to query segments: %w", err)
@@ -45,40 +46,30 @@ func (r *Repository) GetSegmentsOfUser(ctx context.Context, id int) ([]int, erro
 	defer rows.Close()
 
 	for rows.Next() {
-		var name int
-		err := rows.Scan(&name)
+		var segment model.SegmentWithExpires
+		err := rows.Scan(&segment.Id, &segment.Name, &segment.Expires)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan segment name: %w", err)
+			return nil, fmt.Errorf("failed to scan rows: %w", err)
 		}
-		segmentIds = append(segmentIds, name)
+		segments = append(segments, segment)
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error while iterating through segments: %w", err)
 	}
 
-	return segmentIds, nil
+	return segments, nil
 }
 
-func (r *Repository) DeleteUserSegmentIfExists(ctx context.Context, userId, segmentId int) error {
-	_, err := db.FromContext(ctx).Exec(ctx,
-		`DELETE FROM user_segment WHERE user_id=$1 AND segment_id=$2`,
-		userId, segmentId)
+func (r *Repository) DeleteUserSegmentIfExists(ctx context.Context, userId int, segmentName string) (bool, error) {
+	res, err := db.FromContext(ctx).Exec(ctx,
+		`DELETE FROM user_segment us USING segment s WHERE us.segment_id = s.id AND us.user_id=$1 AND s.name=$2`,
+		userId, segmentName)
 	if err != nil {
-		return fmt.Errorf("failed to delete user segment: %w", err)
+		return false, fmt.Errorf("failed to delete user segment: %w", err)
 	}
 
-	return nil
-}
-
-func (r *Repository) DeleteSegmentFromUsers(ctx context.Context, segmentId int) error {
-	_, err := db.FromContext(ctx).Exec(ctx,
-		`DELETE FROM user_segment WHERE segment_id=$1`, segmentId)
-	if err != nil {
-		return fmt.Errorf("failed to delete segment %d from users: %w", segmentId, err)
-	}
-
-	return nil
+	return res.RowsAffected() != 0, nil
 }
 
 func (r *Repository) FlushExpired(ctx context.Context) error {

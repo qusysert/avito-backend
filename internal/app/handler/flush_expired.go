@@ -1,8 +1,8 @@
 package handler
 
 import (
+	"context"
 	"fmt"
-	"net/http"
 )
 
 // FlushExpiredHandler godoc
@@ -12,11 +12,10 @@ import (
 //	@Tags			user segment
 //	@Success		200	{string}	Status Ok
 //	@Router			/flushExpired [delete]
-func (h Handler) FlushExpiredHandler(w http.ResponseWriter, r *http.Request) {
-	err := h.service.FlushExpired(r.Context())
+func (h Handler) FlushExpiredHandler(ctx context.Context, _ emptyRequest) (*emptyResponse, error) {
+	err := h.service.FlushExpired(ctx)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Internal Server Error: %v", err), http.StatusInternalServerError)
-		return
+		return nil, fmt.Errorf("error flushing expires: %w", err)
 	}
-	http.Error(w, fmt.Sprintf("Status Ok"), http.StatusOK)
+	return &emptyResponse{}, nil
 }

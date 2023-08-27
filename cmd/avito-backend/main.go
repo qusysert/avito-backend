@@ -8,13 +8,12 @@ import (
 	"avito-backend/internal/pkg/config"
 	db "avito-backend/pkg/gopkg-db"
 	"fmt"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
-	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"log"
 	"net/http"
 	"os"
-	"path"
 	"time"
 )
 
@@ -44,7 +43,7 @@ func main() {
 	srv := service.New(cfg, repo)
 	hdl := handler.New(srv)
 
-	c := cors.New(cors.Options{
+	corsMw := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowCredentials: true,
 		AllowedHeaders:   []string{"*"},
@@ -55,29 +54,12 @@ func main() {
 	// Setting timeout for the server
 	server := &http.Server{
 		Addr:         "0.0.0.0:" + cfg.HttpPort,
-		ReadTimeout:  600 * time.Second,
-		WriteTimeout: 600 * time.Second,
-		Handler:      c.Handler(router),
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		Handler:      handlers.LoggingHandler(os.Stdout, corsMw.Handler(handlers.CompressHandler(handlers.RecoveryHandler()(router)))),
 	}
 
-	// Linking addresses and handlers
-	for _, rec := range [...]struct {
-		route   string
-		handler http.HandlerFunc
-	}{
-		{route: "/swagger.json", handler: func(w http.ResponseWriter, r *http.Request) {
-			cwd, _ := os.Getwd()
-			http.ServeFile(w, r, path.Join(cwd, "docs/swagger.json"))
-		}},
-		{route: "/swagger/{any:.+}", handler: httpSwagger.Handler(httpSwagger.URL("/swagger.json"))},
-		{route: "/deleteSegment/{id}", handler: hdl.DeleteSegmentHandler},
-		{route: "/addSegment", handler: hdl.AddSegmentHandler},
-		{route: "/addDeleteUserSegment", handler: hdl.AddDeleteUserSegmentHandler},
-		{route: "/flushExpired", handler: hdl.FlushExpiredHandler},
-		{route: "/getSegmentsOfUser/{id}", handler: hdl.GetSegmentsOfUserHandler},
-	} {
-		router.HandleFunc(rec.route, DbMiddleware(rec.handler))
-	}
+	hdl.RegisterHandlers(router, DbMiddleware)
 
 	http.Handle("/", router)
 

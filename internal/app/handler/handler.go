@@ -6,17 +6,23 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-playground/validator"
+	"github.com/gorilla/mux"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"io"
+	"log"
 	"net/http"
+	"os"
+	"path"
 	"reflect"
+	"strconv"
 )
 
 type IService interface {
 	AddSegment(ctx context.Context, name string) (int, error)
-	AddDeleteUserSegment(ctx context.Context, userId int, toAdd []model.Segment, toDelete []string) ([]int, error)
-	DeleteSegment(ctx context.Context, id int) error
+	AddDeleteUserSegment(ctx context.Context, userId int, toAdd []model.SegmentWithExpires, toDelete []string) ([]int, error)
+	DeleteSegment(ctx context.Context, name string) error
 	FlushExpired(ctx context.Context) error
-	GetSegmentsOfUser(ctx context.Context, userID int) ([]string, error)
+	GetSegmentsOfUser(ctx context.Context, userID int) ([]model.SegmentWithExpires, error)
 }
 
 type Handler struct {
@@ -24,62 +30,159 @@ type Handler struct {
 }
 
 func New(srv IService) *Handler {
+
 	return &Handler{service: srv}
 }
 
-// Unmarshal request, do work fn(), then marshall response into JSON anf return
-func handle[REQ any, RESP any](w http.ResponseWriter, r *http.Request, fn func(req REQ) (RESP, error)) {
-	var req REQ
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		toWriterError(&w, err, http.StatusBadRequest)
-		return
+func (h Handler) RegisterHandlers(router *mux.Router, mw ...func(next http.HandlerFunc) http.HandlerFunc) {
+	for _, rec := range [...]struct {
+		route   string
+		handler http.HandlerFunc
+	}{
+		{route: "/swagger.json", handler: func(w http.ResponseWriter, r *http.Request) {
+			cwd, _ := os.Getwd()
+			http.ServeFile(w, r, path.Join(cwd, "docs/swagger.json"))
+		}},
+		{route: "/swagger/{any:.+}", handler: httpSwagger.Handler(httpSwagger.URL("/swagger.json"))},
+		{route: "/deleteSegment", handler: handle(h.DeleteSegmentHandler)},
+		{route: "/addSegment", handler: handle(h.AddSegmentHandler)},
+		{route: "/addDeleteUserSegment", handler: handle(h.AddDeleteUserSegmentHandler)},
+		{route: "/flushExpired", handler: handle(h.FlushExpiredHandler)},
+		{route: "/getSegmentsOfUser/{id}", handler: handle(h.GetSegmentsOfUserHandler)},
+	} {
+		router.HandleFunc(rec.route, middlewareChain(rec.handler, mw...))
 	}
+}
 
-	if !isNil(req) {
-		err = json.Unmarshal(body, &req)
+var validate = validator.New()
+
+func handle[REQ any, RESP any](fn func(ctx context.Context, req REQ) (*RESP, error)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		headers := w.Header()
+		headers.Set("Access-Control-Allow-Origin", "*")
+		headers.Set("Access-Control-Allow-Methods", "POST")
+		headers.Set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Content-Length, Accept")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+
+		var req REQ
+		headers.Set("Content-Type", "application/json")
+		if err := parsePathParams(r, &req); err != nil {
+			sendErrorResponse(w, err, http.StatusBadRequest)
+			return
+		}
+
+		if r.Method != http.MethodGet && r.Method != http.MethodDelete {
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				sendErrorResponse(w, err, http.StatusBadRequest)
+				return
+			}
+
+			err = json.Unmarshal(body, &req)
+			if err != nil {
+				sendErrorResponse(w, err, http.StatusBadRequest)
+				return
+			}
+		}
+
+		if err := validate.Struct(req); err != nil {
+			sendErrorResponse(w, err, http.StatusBadRequest)
+			return
+		}
+
+		resp, err := fn(r.Context(), req)
 		if err != nil {
-			toWriterError(&w, err, http.StatusBadRequest)
+			sendErrorResponse(w, err, http.StatusInternalServerError)
+			return
+		}
+
+		respJson, err := json.Marshal(resp)
+		if err != nil {
+			sendErrorResponse(w, err, http.StatusInternalServerError)
+			return
+		}
+
+		headers.Set("Content-Length", strconv.Itoa(len(respJson)))
+		_, err = w.Write(respJson)
+		if err != nil {
+			sendErrorResponse(w, err, http.StatusInternalServerError)
 			return
 		}
 	}
-
-	validate := validator.New()
-	if err := validate.Struct(req); err != nil {
-		toWriterError(&w, err, http.StatusBadRequest)
-		return
-	}
-
-	resp, err := fn(req)
-	if err != nil {
-		toWriterError(&w, err, http.StatusInternalServerError)
-		return
-	}
-
-	respJSON, err := json.Marshal(resp)
-	if err != nil {
-		toWriterError(&w, err, http.StatusInternalServerError)
-		return
-	}
-
-	_, err = w.Write(respJSON)
-	if err != nil {
-		toWriterError(&w, err, http.StatusInternalServerError)
-		return
-	}
 }
 
-func toWriterError(w *http.ResponseWriter, er error, code int) {
-	http.Error(*w, fmt.Sprintf("%+v", er), code)
+func sendErrorResponse(w http.ResponseWriter, respErr error, respCode int) {
+	respJson, err := json.Marshal(errorResponse{Error: respErr.Error()})
+	if err != nil {
+		http.Error(w, fmt.Sprintf("%+v", err), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Length", strconv.Itoa(len(respJson)))
+	w.WriteHeader(respCode)
+	_, _ = w.Write(respJson)
+	log.Println(respErr)
 }
 
-func isNil(i interface{}) bool {
-	if i == nil {
-		return true
+type emptyRequest struct{}
+type emptyResponse struct{}
+type errorResponse struct {
+	Error string `json:"error"`
+}
+
+func parsePathParams[REQ any](r *http.Request, req *REQ) error {
+
+	setField := func(field reflect.StructField, val reflect.Value, value string) error {
+		switch field.Type.Kind() {
+		case reflect.String:
+			val.SetString(value)
+			return nil
+		case reflect.Int:
+			v, err := strconv.Atoi(value)
+			if err != nil {
+				return err
+			}
+			val.SetInt(int64(v))
+			return nil
+		default:
+			return fmt.Errorf("Unsupported path value type %v\n", field.Type.Kind())
+		}
 	}
-	switch reflect.TypeOf(i).Kind() {
-	case reflect.Ptr, reflect.Map, reflect.Array, reflect.Chan, reflect.Slice:
-		return reflect.ValueOf(i).IsNil()
+
+	pathParams := mux.Vars(r)
+	queryParams := r.URL.Query()
+	val := reflect.ValueOf(req).Elem()
+	for i := 0; i < val.NumField(); i++ {
+		field := val.Type().Field(i)
+		name, ok := field.Tag.Lookup("path")
+		if ok {
+			if value, ok := pathParams[name]; ok {
+				if err := setField(field, val.Field(i), value); err != nil {
+					return err
+				}
+			}
+		}
+		name, ok = field.Tag.Lookup("query")
+		if ok {
+			if value, ok := queryParams[name]; ok {
+				if len(value) == 0 {
+					return fmt.Errorf("query parameters %s is empty", name)
+				}
+				if err := setField(field, val.Field(i), value[0]); err != nil {
+					return err
+				}
+			}
+		}
 	}
-	return false
+	return nil
+}
+
+func middlewareChain(h http.HandlerFunc, m ...func(next http.HandlerFunc) http.HandlerFunc) http.HandlerFunc {
+	if len(m) == 0 {
+		return h
+	}
+	return m[0](middlewareChain(h, m[1:cap(m)]...))
 }

@@ -160,11 +160,14 @@ const docTemplate = `{
     "definitions": {
         "handler.AddDeleteUserSegmentRequest": {
             "type": "object",
+            "required": [
+                "user_id"
+            ],
             "properties": {
                 "to_add": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/model.Segment"
+                        "$ref": "#/definitions/handler.Segment"
                     }
                 },
                 "to_delete": {
@@ -204,6 +207,9 @@ const docTemplate = `{
         },
         "handler.AddSegmentRequest": {
             "type": "object",
+            "required": [
+                "name"
+            ],
             "properties": {
                 "name": {
                     "type": "string",
@@ -222,7 +228,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.Segment": {
+        "handler.Segment": {
             "type": "object",
             "properties": {
                 "expires": {

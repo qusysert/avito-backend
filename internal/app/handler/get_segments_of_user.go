@@ -1,12 +1,17 @@
 package handler
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"github.com/gorilla/mux"
-	"net/http"
-	"strconv"
 )
+
+type GetSegmentsOfUserRequest struct {
+	Id int
+}
+
+type GetSegmentsOfUserResponse struct {
+	Segments []Segment `json:"segments"`
+}
 
 // GetSegmentsOfUserHandler godoc
 //
@@ -16,36 +21,10 @@ import (
 //	@Param 			id path int true "User id"
 //	@Success		200	{string}	Status Ok
 //	@Router			/getSegmentsOfUser/{id} [get]
-func (h Handler) GetSegmentsOfUserHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	idArg := vars["id"]
-	id, err := strconv.ParseInt(idArg, 10, 64)
+func (h Handler) GetSegmentsOfUserHandler(ctx context.Context, req GetSegmentsOfUserRequest) (*GetSegmentsOfUserResponse, error) {
+	segments, err := h.service.GetSegmentsOfUser(ctx, req.Id)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Bad Request: %v", err), http.StatusBadRequest)
-		return
+		return nil, fmt.Errorf("cannot get segments of user: %w", err)
 	}
-	segments, err := h.service.GetSegmentsOfUser(r.Context(), int(id))
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Internal Server Error: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	if len(segments) == 0 {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	segmentsJSON, err := json.Marshal(segments)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Internal Server Error: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-
-	_, err = w.Write(segmentsJSON)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Internal Server Error: %v", err), http.StatusInternalServerError)
-		return
-	}
+	return &GetSegmentsOfUserResponse{Segments: fromModelSegmentList(segments)}, nil
 }

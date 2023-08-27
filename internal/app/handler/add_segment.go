@@ -1,12 +1,13 @@
 package handler
 
 import (
-	"net/http"
+	"context"
+	"fmt"
 )
 
 // AddSegmentRequest example
 type AddSegmentRequest struct {
-	Name string `json:"name" example:"AVITO_TEST_SEGMENT" format:"string"`
+	Name string `json:"name" validate:"required" example:"AVITO_TEST_SEGMENT" format:"string"`
 }
 
 // AddSegmentResponse example
@@ -24,12 +25,10 @@ type AddSegmentResponse struct {
 //	@Param 			request body 	AddSegmentRequest true "query params"
 //	@Success		200	{object}	AddSegmentResponse
 //	@Router			/addSegment [post]
-func (h Handler) AddSegmentHandler(w http.ResponseWriter, r *http.Request) {
-	handle(w, r, func(req AddSegmentRequest) (AddSegmentResponse, error) {
-		id, err := h.service.AddSegment(r.Context(), req.Name)
-		if err != nil {
-			return AddSegmentResponse{}, err
-		}
-		return AddSegmentResponse{Id: id}, err
-	})
+func (h Handler) AddSegmentHandler(ctx context.Context, req AddSegmentRequest) (*AddSegmentResponse, error) {
+	id, err := h.service.AddSegment(ctx, req.Name)
+	if err != nil {
+		return nil, fmt.Errorf("cannot add segment: %w", err)
+	}
+	return &AddSegmentResponse{Id: id}, nil
 }

@@ -20,8 +20,8 @@ func (r *Repository) AddSegmentIfNotExists(ctx context.Context, name string) (in
 	return id, nil
 }
 
-func (r *Repository) DeleteSegment(ctx context.Context, id int) error {
-	result, err := db.FromContext(ctx).Exec(ctx, `DELETE FROM segment WHERE id = $1`, id)
+func (r *Repository) DeleteSegment(ctx context.Context, name string) error {
+	result, err := db.FromContext(ctx).Exec(ctx, `DELETE FROM segment WHERE name = $1`, name)
 	if err != nil {
 		return fmt.Errorf("failed to delete segment: %w", err)
 	}
@@ -29,7 +29,7 @@ func (r *Repository) DeleteSegment(ctx context.Context, id int) error {
 	rowsAffected := result.RowsAffected()
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("segment with ID %d does not exist", id)
+		return fmt.Errorf("segment %s does not exist", name)
 	}
 
 	return nil
@@ -51,7 +51,7 @@ func (r *Repository) GetSegmentId(ctx context.Context, name string) (int, error)
 	var id int
 	row := db.FromContext(ctx).QueryRow(ctx, `SELECT id FROM segment WHERE name=$1`, name)
 
-	err := row.Scan(&name)
+	err := row.Scan(&id)
 	if err != nil {
 		return 0, fmt.Errorf("cant get segment id with row.Scan() %w", err)
 	}
