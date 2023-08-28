@@ -6,7 +6,7 @@ import (
 )
 
 type GetSegmentsOfUserRequest struct {
-	Id int
+	Id int `validate:"required"`
 }
 
 type GetSegmentsOfUserResponse struct {

@@ -7,8 +7,8 @@ import (
 )
 
 type Segment struct {
-	Name    string `json:"name" example:"SEGMENT10"`
-	Expires string `json:"expires" example:"2023-08-25T17:00:05"`
+	Name    string `json:"name" validate:"required" example:"SEGMENT10"`
+	Expires string `json:"expires" validate:"datetime" example:"2023-08-25T17:00:05"`
 }
 
 func fromModelSegment(m model.SegmentWithExpires) Segment {
