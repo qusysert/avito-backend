@@ -93,6 +93,20 @@ func TestApp(t *testing.T) {
 		t.Errorf("wrong number of segments, expected 0, got %d", len(respGetSegmentsOfUser.Segments))
 	}
 
+	_, err = env.Hdl.DeleteSegmentHandler(env.Ctx, handler.DeleteSegmentRequest{Name: segments[0]})
+	if err != nil {
+		t.Errorf("cannot delete segment: %v", err)
+	}
+	_, err = env.Hdl.DeleteSegmentHandler(env.Ctx, handler.DeleteSegmentRequest{Name: segments[0]})
+	if err == nil {
+		t.Errorf("no error while deleting non-existing segment")
+	}
+
+	_, err = env.Hdl.FlushExpiredHandler(env.Ctx, struct{}{})
+	if err != nil {
+		t.Errorf("cannot flush expired user segment pairs: %v", err)
+	}
+
 }
 
 const nameLength = 6

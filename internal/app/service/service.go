@@ -2,7 +2,7 @@ package service
 
 import (
 	"avito-backend/internal/app/model"
-	config "avito-backend/internal/pkg/config"
+	"avito-backend/internal/pkg/config"
 	"context"
 	"time"
 )

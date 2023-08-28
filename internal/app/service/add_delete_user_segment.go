@@ -10,12 +10,11 @@ import (
 func (s *Service) AddDeleteUserSegment(ctx context.Context, userId int, toAdd []model.SegmentWithExpires, toDelete []string) ([]int, error) {
 	var addedIds []int
 
-	conn := db.FromContext(ctx)
-	if err := conn.WithTx(ctx, func(ctx context.Context) error {
+	if err := db.WithTx(ctx, func(ctx context.Context) error {
 		for _, segment := range toAdd {
 			segmentId, err := s.repo.AddSegmentIfNotExists(ctx, segment.Name)
 			if err != nil {
-				return fmt.Errorf("cannot add segment %s: %w", segment, err)
+				return fmt.Errorf("cannot add segment %v: %w", segment, err)
 			}
 
 			userSegmentId, err := s.repo.AddUserSegmentIfNotExists(ctx, userId, segmentId, &segment.Expires)

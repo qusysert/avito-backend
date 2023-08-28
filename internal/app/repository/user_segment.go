@@ -63,7 +63,7 @@ func (r *Repository) GetUserSegments(ctx context.Context, id int) ([]model.Segme
 
 func (r *Repository) DeleteUserSegmentIfExists(ctx context.Context, userId int, segmentName string) (bool, error) {
 	res, err := db.FromContext(ctx).Exec(ctx,
-		`DELETE FROM user_segment us USING segment s WHERE us.segment_id = s.id AND us.user_id=$1 AND s.name=$2`,
+		`DELETE FROM user_segment WHERE segment_id = (SELECT id FROM segment WHERE name = $2) AND user_id = $1`,
 		userId, segmentName)
 	if err != nil {
 		return false, fmt.Errorf("failed to delete user segment: %w", err)

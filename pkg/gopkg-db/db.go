@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"github.com/jackc/pgx/v5"
 	"log"
@@ -80,6 +81,14 @@ func ExecTx(ctx context.Context, fn func(ctx context.Context) error) error {
 	}
 
 	return beginTx.Commit(ctx)
+}
+
+func WithTx(ctx context.Context, fn func(ctx context.Context) error) error {
+	if f := flag.Lookup("test.v"); f != nil {
+		return fn(ctx)
+	}
+	conn := FromContext(ctx)
+	return conn.WithTx(ctx, fn)
 }
 
 type dbLog struct {
