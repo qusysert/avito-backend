@@ -1,3 +1,5 @@
+.PHONY: build gen-swagger docker-up gen-mock test
+
 LOCAL_BIN:=$(CURDIR)/bin
 
 $(LOCAL_DIR):
