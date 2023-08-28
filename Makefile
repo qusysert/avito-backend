@@ -24,3 +24,6 @@ gen-mock:
 
 test:
 	go test ./...
+
+test-ci:
+	go test ./internal/... ./pkg/...
