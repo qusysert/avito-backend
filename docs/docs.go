@@ -87,19 +87,19 @@ const docTemplate = `{
                 }
             }
         },
-        "/deleteSegment/{id}": {
+        "/deleteSegment": {
             "delete": {
-                "description": "delete segment by id; delete all user_segment entries with the given id",
+                "description": "delete segment by name; delete segment and all user_segment entries with the given segment name",
                 "tags": [
                     "segment"
                 ],
                 "summary": "Delete segment",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "Segment id",
-                        "name": "id",
-                        "in": "path",
+                        "type": "string",
+                        "description": "Segment name",
+                        "name": "name",
+                        "in": "query",
                         "required": true
                     }
                 ],
@@ -230,6 +230,9 @@ const docTemplate = `{
         },
         "handler.Segment": {
             "type": "object",
+            "required": [
+                "name"
+            ],
             "properties": {
                 "expires": {
                     "type": "string",

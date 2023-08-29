@@ -56,6 +56,8 @@ definitions:
       name:
         example: SEGMENT10
         type: string
+    required:
+    - name
     type: object
 host: localhost:8080
 info:
@@ -110,16 +112,16 @@ paths:
       summary: Add segment
       tags:
       - segment
-  /deleteSegment/{id}:
+  /deleteSegment:
     delete:
-      description: delete segment by id; delete all user_segment entries with the
-        given id
+      description: delete segment by name; delete segment and all user_segment entries
+        with the given segment name
       parameters:
-      - description: Segment id
-        in: path
-        name: id
+      - description: Segment name
+        in: query
+        name: name
         required: true
-        type: integer
+        type: string
       responses:
         "200":
           description: OK
