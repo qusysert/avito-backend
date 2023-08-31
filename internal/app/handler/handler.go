@@ -161,7 +161,7 @@ func parsePathParams[REQ any](r *http.Request, req *REQ) error {
 		name, ok := field.Tag.Lookup("path")
 		if ok {
 			if value, ok := pathParams[name]; ok {
-				decoded, err := url.QueryUnescape(value)
+				decoded, err := url.PathUnescape(value)
 				if err != nil {
 					return fmt.Errorf("cannot decode special symbol: %w", err)
 				}
