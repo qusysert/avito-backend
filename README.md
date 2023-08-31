@@ -55,7 +55,8 @@ Swagger документация доступна по адресу http://local
     }
 #### Получение сегментов пользователя
     curl -X 'GET' \
-      'http://localhost:8085/getSegmentsOfUser/1000'
+      'http://localhost:8085/getSegmentsOfUser/1000' \
+        -H 'accept: application/json' 
 ###### Ответ при успешном выполнении
     {
         "segments": [
@@ -77,7 +78,8 @@ Swagger документация доступна по адресу http://local
 
 #### Удаление сегмента
     curl -X 'DELETE' \
-      'http://localhost:8085/deleteSegment?name=SOME_SEGMENT_NAME' 
+      'http://localhost:8085/deleteSegment?name=SOME_SEGMENT_NAME' \
+        -H 'accept: application/json' 
 
 ###### Ответ при успешном выполнении
     {
