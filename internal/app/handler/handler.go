@@ -11,6 +11,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"reflect"
@@ -160,7 +161,11 @@ func parsePathParams[REQ any](r *http.Request, req *REQ) error {
 		name, ok := field.Tag.Lookup("path")
 		if ok {
 			if value, ok := pathParams[name]; ok {
-				if err := setField(field, val.Field(i), value); err != nil {
+				decoded, err := url.QueryUnescape(value)
+				if err != nil {
+					return fmt.Errorf("cannot decode special symbol: %w", err)
+				}
+				if err := setField(field, val.Field(i), decoded); err != nil {
 					return err
 				}
 			}
@@ -171,7 +176,11 @@ func parsePathParams[REQ any](r *http.Request, req *REQ) error {
 				if len(value) == 0 {
 					return fmt.Errorf("query parameters %s is empty", name)
 				}
-				if err := setField(field, val.Field(i), value[0]); err != nil {
+				decoded, err := url.QueryUnescape(value[0])
+				if err != nil {
+					return fmt.Errorf("cannot decode special symbol: %w", err)
+				}
+				if err := setField(field, val.Field(i), decoded); err != nil {
 					return err
 				}
 			}
